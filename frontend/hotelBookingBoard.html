@@ -9,41 +9,250 @@
       #map_canvas { height: 100% }
     </style>
     <script type="text/javascript" src="scripts/getHTTPObject.js"></script>
-    <script type="text/javascript" src="scripts/UpdateBookingList.js"></script>
+    <script type="text/javascript" src="scripts/updateBookingList.js"></script>
     <script type="text/javascript"
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
     </script>
     <script type="text/javascript">
+      var map;
+      var bookings = [
+        {
+          'city': 'jizhou',
+          'coords': [37.550,115.579],
+        },
+        {
+          'city': 'beijing',
+          'coords': [39.960,116.323],
+        },
+        {
+          'city': 'mudanjiang',
+          'coords': [44.582,129.601],
+        },
+        {
+          'city': 'chuangchun',
+          'coords': [43.8922585918,125.3071703359],
+        },
+        {
+          'city': 'chengdu',
+          'coords': [30.6738291466,104.0614714029],
+        },
+        {
+          'city': 'nanjing',
+          'coords': [32.0511368085,118.7715804329],
+        },
+        {
+          'city': 'shijiazhuang',
+          'coords': [38.0430783266,114.5155608110],
+        },
+        {
+          'city': 'beijing',
+          'coords': [39.8036997885,116.7336169467],
+        }
+      ];
+      var nextOrder = 0;
+      var syncDataInterval = 30*1000;
+      var displayOrderInterval = 1*1000;
+      var colors = [];
+
+      //var markersByMonth = [];
+      //for (var i = 0; i < 12; ++i) {
+      //  markersByMonth.push([]);
+      //}
+
       function initialize() {
+        /*
         var mapOptions = {
           center: new google.maps.LatLng(37.550,115.579), // JiZhou Municipal Government
           zoom: 5,
           mapTypeId: google.maps.MapTypeId.TERRAIN
         };
-        var map = new google.maps.Map(document.getElementById("map_canvas"),
+        */
+        var mapOptions = {
+          zoom: 5,
+          center: new google.maps.LatLng(37.550,115.579), // JiZhou Municipal Government
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: false,
+          backgroundColor: 'white',
+          zoomControl: false,
+          streetViewControl: false,
+          panControl: false,
+          styles: [
+            {
+              stylers: [
+                { visibility: "off" }
+              ]
+            },{
+              featureType: "water",
+              stylers: [
+                { visibility: "on" },
+                { lightness: -50 },
+                { saturation: -100 }
+              ]
+            },{
+              featureType: "administrative.province",
+              elementType: "geometry",
+              stylers: [
+                { visibility: "on" }
+              ]
+            },{
+              featureType: "administrative.country",
+              elementType: "geometry",
+              stylers: [
+                { visibility: "on" }
+              ]
+            },{
+              featureType: "water",
+              elementType: "labels",
+              stylers: [
+                { visibility: "off" }
+              ]
+            }
+          ]
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"),
             mapOptions);
 
         // 标记地点
+        /*
         var myKuxunLatLng = new google.maps.LatLng(39.960,116.323)
         var myKuxunMarker = new google.maps.Marker({
           position: myKuxunLatLng,
           title: "酷讯旅游在这里！"
         });
         myKuxunMarker.setMap(map);
+        */
 
-        //updateBookingList();
+        // 初始化颜色列表
+        fillColorArray();
+
         running = true;
-        realtimeUpdate();
+        // 设置定时同步更新定时器
+        //syncDataTimer();
+
+        // 设置动画展示定时器
+        displayOrderTimer();
       }
 
-      function realtimeUpdate() {
+      // 同步更新定时器
+      function syncDataTimer() {
         if (! running) {
           return;
         }
+        // sync data
         updateBookingList();
-        setTimeout(realtimeUpdate, 30*1000);
+
+        // set next sync timer
+        setTimeout(syncDataTimer, syncDataInterval);
+      }
+
+      // 动画展示定时器
+      function displayOrderTimer() {
+        // 连续显示一组点
+        while (nextOrder < bookings.length) {
+          //
+          displayAOrder(bookings[nextOrder]['coords'], 2015, 5);
+          nextOrder++;
+          break;
+        }
+
+        // TODO test
+        if (nextOrder == bookings.length) {
+          nextOrder = 0;
+        }
+
+        // set next display timer
+        setTimeout(displayOrderTimer, displayOrderInterval);
+      }
+
+      function displayAOrder(coords, year, month) {
+        var location = new google.maps.LatLng(coords[0], coords[1]);
+
+        var outer = new google.maps.Marker({
+          position: location,
+          clickable: false,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillOpacity: 0.5,
+            fillColor: colors[0],
+            strokeOpacity: 1.0,
+            strokeColor: colors[0],
+            strokeWeight: 1.0,
+            scale: 0,
+          },
+          optimized: false,
+          //zIndex: year,
+          map: map
+        });
+
+        var inner = new google.maps.Marker({
+          position: location,
+          clickable: false,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillOpacity: 1.0,
+            fillColor: colors[0],
+            strokeWeight: 0,
+            scale: 0
+          },
+          optimized: false,
+          //zIndex: year
+        });
+        //inner.year = year;
+
+        //markersByMonth[month - 1].push(inner);
+
+        for (var i = 0; i <= 10; i++) {
+          setTimeout(setScale(inner, outer, i / 10), i * 60);
+        }
+      }
+
+      function setScale(inner, outer, scale) {
+        return function() {
+          if (scale == 1) {
+            outer.setMap(null);
+          } else {
+            var icono = outer.get('icon');
+            icono.strokeOpacity = Math.cos((Math.PI/2) * scale);
+            icono.fillOpacity = icono.strokeOpacity * 0.5;
+            icono.scale = Math.sin((Math.PI/2) * scale) * 15;
+            outer.set('icon', icono);
+
+            var iconi = inner.get('icon');
+            var newScale = (icono.scale < 2.0 ? 0.0 : 2.0);
+            if (iconi.scale != newScale) {
+              iconi.scale = newScale;
+              inner.set('icon', iconi);
+              if (!inner.getMap()) inner.setMap(map);
+            }
+          }
+        }
+      }
+
+      function fillColorArray() {
+        var max = 198;
+        for (var i = 0; i < 44; i++) {
+          if (i < 11) { // red to yellow
+            r = max;
+            g = Math.floor(i * (max / 11));
+            b = 0;
+          } else if (i < 22) { // yellow to green
+            r = Math.floor((22 - i) * (max / 11));
+            g = max;
+            b = 0;
+          } else if (i < 33) { // green to cyan
+            r = 0;
+            g = max;
+            b = Math.floor((i - 22) * (max / 11));
+          } else { // cyan to blue
+            r = 0;
+            g = Math.floor((44 - i) * (max / 11));
+            b = max;
+          }
+          colors[i] = 'rgb(' + r + ',' + g + ',' + b + ')';
+        }
       }
     </script>
+
   </head>
   <body onload="initialize()">
     <div id="map_canvas" style="width:100%; height:90%"></div>
