@@ -14,7 +14,9 @@
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
     </script>
     <script type="text/javascript">
+      bookings_new = {}
       var map;
+      var bookings_queue = []
       var bookings = [
         {
           'city': 'jizhou',
@@ -51,7 +53,7 @@
       ];
       var nextOrder = 0;
       var syncDataInterval = 30*1000;
-      var displayOrderInterval = 1*1000;
+      var displayOrderInterval = 5*1000;
       var colors = [];
 
       //var markersByMonth = [];
@@ -160,9 +162,33 @@
           nextOrder = 0;
         }
 
+        updateBookingList(storeAsyncRespData, errorHandler);
+
+        if (bookings_queue.length > 5) {
+            booking = bookings_queue.shift();
+            console.log('OUT '+booking);
+        }
+
         // set next display timer
         setTimeout(displayOrderTimer, displayOrderInterval);
       }
+
+      //
+      function storeAsyncRespData(data) {
+        book_list = data;
+        var index, len;
+        for (index = 0, len = book_list.length; index < len; ++index) {
+            bookings_queue.push(book_list[index]);
+        }
+        // console窗口输出
+        console.log('IN '+bookings_queue.toString());
+      }
+
+      function errorHandler(data) {
+        status = data;
+      }
+
+      // ------------- 动画展示 -------------
 
       function displayAOrder(coords, year, month) {
         var location = new google.maps.LatLng(coords[0], coords[1]);
