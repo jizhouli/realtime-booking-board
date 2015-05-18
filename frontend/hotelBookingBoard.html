@@ -32,42 +32,6 @@
     <script type="text/javascript" src="scripts/updateBookingList.js"></script>
     </script>
     <script type="text/javascript">
-      // 测试用例
-      var bookings = [
-          {
-            'city': 'jizhou',
-            'coords': [37.550,115.579],
-          },
-          {
-            'city': 'beijing',
-            'coords': [39.960,116.323],
-          },
-          {
-            'city': 'mudanjiang',
-            'coords': [44.582,129.601],
-          },
-          {
-            'city': 'chuangchun',
-            'coords': [43.8922585918,125.3071703359],
-          },
-          {
-            'city': 'chengdu',
-            'coords': [30.6738291466,104.0614714029],
-          },
-          {
-            'city': 'nanjing',
-            'coords': [32.0511368085,118.7715804329],
-          },
-          {
-            'city': 'shijiazhuang',
-            'coords': [38.0430783266,114.5155608110],
-          },
-          {
-            'city': 'beijing',
-            'coords': [39.8036997885,116.7336169467],
-          }
-        ];
-
       // 地图控件实例
       var map;
 
@@ -210,10 +174,15 @@
       }
 
       function storeAsyncRespData(data) {
-        book_list = data;
         status = data['result'];
+        if (status != 0) {
+          return;
+        }
+        
         books_dict = data['data'];
         in_cnt = 0;
+
+        outer_queue = [];
         for (var key in books_dict) {
           in_cnt++;
           value = books_dict[key];
@@ -226,11 +195,21 @@
               ],
             'number': value['number']
           }
-          bookings_queue.push(item);
 
-          //TODO debug log
+          // 分解城市number到多条记录
+          inner_queue = [];
+          for (var i = 0; i < value['number']; i++) {
+            inner_queue.push(item);
+          };
+          outer_queue = outer_queue.concat(inner_queue);
+
           //console.log('IN '+in_cnt.toString()+'-'+JSON.stringify(item));
         }
+
+        // 对本次装载队列进行随机排序
+        outer_queue = shuffle(outer_queue);
+        bookings_queue = bookings_queue.concat(outer_queue);
+
         // console窗口输出
         //console.log('IN '+JSON.stringify(data));
         console.log('IN count '+in_cnt.toString()+' queue '+bookings_queue.length.toString());
@@ -239,6 +218,25 @@
       function errorHandler(data) {
         status = data;
         console.log('booking info async request failed - status '+status);
+      }
+
+      function shuffle(array) {
+        var currentIndex = array.length, temporaryValue, randomIndex ;
+
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+
+          // Pick a remaining element...
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex -= 1;
+
+          // And swap it with the current element.
+          temporaryValue = array[currentIndex];
+          array[currentIndex] = array[randomIndex];
+          array[randomIndex] = temporaryValue;
+        }
+
+        return array;
       }
 
       // ------------- 动画展示 -------------
