@@ -7,53 +7,76 @@
       html { height: 100% }
       body { height: 100%; margin: 0; padding: 0 }
       #map_canvas { height: 100% }
+      #map_title {
+        position: absolute;
+        top: 30px;
+        left: 50px;
+        font-size: 35px;
+        font-family: sans-serif;
+        text-shadow: 0.1em 0.1em 0.2em black;
+        color: white;
+      }
+      #city_board {
+        position: absolute;
+        top: 45px;
+        left: 350px;
+        font-size: 20px;
+        font-family: sans-serif;
+        text-shadow: 0.1em 0.1em 0.2em black;
+        color: white;
+      }
     </style>
+      <script type="text/javascript" 
+      src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
     <script type="text/javascript" src="scripts/getHTTPObject.js"></script>
     <script type="text/javascript" src="scripts/updateBookingList.js"></script>
-    <script type="text/javascript"
-      src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
     </script>
     <script type="text/javascript">
-      bookings_new = {}
-      var map;
-      var bookings_queue = []
+      // 测试用例
       var bookings = [
-        {
-          'city': 'jizhou',
-          'coords': [37.550,115.579],
-        },
-        {
-          'city': 'beijing',
-          'coords': [39.960,116.323],
-        },
-        {
-          'city': 'mudanjiang',
-          'coords': [44.582,129.601],
-        },
-        {
-          'city': 'chuangchun',
-          'coords': [43.8922585918,125.3071703359],
-        },
-        {
-          'city': 'chengdu',
-          'coords': [30.6738291466,104.0614714029],
-        },
-        {
-          'city': 'nanjing',
-          'coords': [32.0511368085,118.7715804329],
-        },
-        {
-          'city': 'shijiazhuang',
-          'coords': [38.0430783266,114.5155608110],
-        },
-        {
-          'city': 'beijing',
-          'coords': [39.8036997885,116.7336169467],
-        }
-      ];
-      var nextOrder = 0;
-      var syncDataInterval = 30*1000;
-      var displayOrderInterval = 5*1000;
+          {
+            'city': 'jizhou',
+            'coords': [37.550,115.579],
+          },
+          {
+            'city': 'beijing',
+            'coords': [39.960,116.323],
+          },
+          {
+            'city': 'mudanjiang',
+            'coords': [44.582,129.601],
+          },
+          {
+            'city': 'chuangchun',
+            'coords': [43.8922585918,125.3071703359],
+          },
+          {
+            'city': 'chengdu',
+            'coords': [30.6738291466,104.0614714029],
+          },
+          {
+            'city': 'nanjing',
+            'coords': [32.0511368085,118.7715804329],
+          },
+          {
+            'city': 'shijiazhuang',
+            'coords': [38.0430783266,114.5155608110],
+          },
+          {
+            'city': 'beijing',
+            'coords': [39.8036997885,116.7336169467],
+          }
+        ];
+
+      // 地图控件实例
+      var map;
+
+      // 预订任务队列
+      var bookings_queue = [];
+
+      // 定时器
+      var syncInterval = 5*1000; //ms
+      var displayInterval = 200; //ms
       var colors = [];
 
       //var markersByMonth = [];
@@ -69,13 +92,15 @@
           mapTypeId: google.maps.MapTypeId.TERRAIN
         };
         */
+
+        // 配置地图属性
         var mapOptions = {
           zoom: 5,
           center: new google.maps.LatLng(37.550,115.579), // JiZhou Municipal Government
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           mapTypeControl: false,
           backgroundColor: 'white',
-          zoomControl: false,
+          zoomControl: true,
           streetViewControl: false,
           panControl: false,
           styles: [
@@ -111,6 +136,8 @@
             }
           ]
         };
+
+        // 初始化地图实例
         map = new google.maps.Map(document.getElementById("map_canvas"),
             mapOptions);
 
@@ -127,70 +154,98 @@
         // 初始化颜色列表
         fillColorArray();
 
-        running = true;
-        // 设置定时同步更新定时器
-        //syncDataTimer();
+        // 设置数据同步定时器
+        syncTimer();
 
-        // 设置动画展示定时器
-        displayOrderTimer();
+        // 设置展示定时器
+        displayTimer();
       }
 
-      // 同步更新定时器
-      function syncDataTimer() {
-        if (! running) {
-          return;
-        }
+      function syncTimer() {
         // sync data
-        updateBookingList();
+        updateBookingList(storeAsyncRespData, errorHandler);
 
         // set next sync timer
-        setTimeout(syncDataTimer, syncDataInterval);
+        setTimeout(syncTimer, syncInterval);
       }
 
-      // 动画展示定时器
-      function displayOrderTimer() {
-        // 连续显示一组点
-        while (nextOrder < bookings.length) {
-          //
-          displayAOrder(bookings[nextOrder]['coords'], 2015, 5);
-          nextOrder++;
+      function displayTimer() {
+        // 标记展示
+        while (booking = bookings_queue.shift())
+        {
+          displayAOrder(booking['city_name'], booking['coords'], 2015, 5);
+          //console.log("%s %s (%s,%s)", booking['city'], booking['city_name'], booking['coords'][0], booking['coords'][1]);
           break;
         }
 
-        // TODO test
-        if (nextOrder == bookings.length) {
-          nextOrder = 0;
-        }
-
-        updateBookingList(storeAsyncRespData, errorHandler);
-
-        if (bookings_queue.length > 5) {
+        // WARNING: 任务积累异常处理 dump display 机制（兜底机制）
+        if (bookings_queue.length > 1000) {
+          len_a = bookings_queue.length;
+          for (var i = 0; i < 500; i++) {
             booking = bookings_queue.shift();
-            console.log('OUT '+booking);
+            displayAOrder(booking['city_name'], booking['coords'], 2015, 5);
+          };
+          len_b = bookings_queue.length;
+          console.log("booking queue dump %d -> %d", len_a, len_b);
+        }
+        
+        // 根据队列长度动态调成timeout的毫秒数
+        dynamicDisplayInterval = displayInterval;
+        if (bookings_queue.length > 100)
+        {
+          dynamicDisplayInterval = 5;
+          console.log('[dynamic interval] 3. SET %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
+        }
+        else if (bookings_queue.length > 50)
+        {
+          dynamicDisplayInterval = Math.floor(syncInterval/(bookings_queue.length+1));
+          console.log('[dynamic interval] 2. CALC %dms (%d/%d)', dynamicDisplayInterval, syncInterval, bookings_queue.length);
+        }
+        else
+        {
+          console.log('[dynamic interval] 1. default %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
         }
 
-        // set next display timer
-        setTimeout(displayOrderTimer, displayOrderInterval);
+        setTimeout(displayTimer, dynamicDisplayInterval);
       }
 
-      //
       function storeAsyncRespData(data) {
         book_list = data;
-        var index, len;
-        for (index = 0, len = book_list.length; index < len; ++index) {
-            bookings_queue.push(book_list[index]);
+        status = data['result'];
+        books_dict = data['data'];
+        in_cnt = 0;
+        for (var key in books_dict) {
+          in_cnt++;
+          value = books_dict[key];
+          item = {
+            'city': key,
+            'city_name': value['city_name'],
+            'coords': [
+              value['latitude'],
+              value['longitude']
+              ],
+            'number': value['number']
+          }
+          bookings_queue.push(item);
+
+          //TODO debug log
+          //console.log('IN '+in_cnt.toString()+'-'+JSON.stringify(item));
         }
         // console窗口输出
-        console.log('IN '+bookings_queue.toString());
+        //console.log('IN '+JSON.stringify(data));
+        console.log('IN count '+in_cnt.toString()+' queue '+bookings_queue.length.toString());
       }
 
       function errorHandler(data) {
         status = data;
+        console.log('booking info async request failed - status '+status);
       }
 
       // ------------- 动画展示 -------------
 
-      function displayAOrder(coords, year, month) {
+      function displayAOrder(city, coords, year, month) {
+        document.getElementById('city_board').innerHTML = city;
+
         var location = new google.maps.LatLng(coords[0], coords[1]);
 
         var outer = new google.maps.Marker({
@@ -281,7 +336,11 @@
 
   </head>
   <body onload="initialize()">
-    <div id="map_canvas" style="width:100%; height:90%"></div>
+    <div id="map_canvas" style="width:100%; height:100%"></div>
+    <div id="map_title">酒店搜索实时展示</div>
+    <div id="city_board">北京</div>
+    <!--
     <div id="footer"></div>
+    -->
   </body>
 </html>
