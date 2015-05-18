@@ -26,7 +26,7 @@
         color: white;
       }
     </style>
-      <script type="text/javascript" 
+    <script type="text/javascript" 
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
     <script type="text/javascript" src="scripts/getHTTPObject.js"></script>
     <script type="text/javascript" src="scripts/updateBookingList.js"></script>
@@ -142,12 +142,13 @@
           break;
         }
 
-        // WARNING: 任务积累异常处理 dump display 机制（兜底机制）
+        // WARNING: 任务积累异常处理 dump display 机制（兜底机制）（理论上不会发生）
         if (bookings_queue.length > 1000) {
           len_a = bookings_queue.length;
-          for (var i = 0; i < 500; i++) {
+          for (var i = 0; i < 900; i++) {
             booking = bookings_queue.shift();
-            displayAOrder(booking['city_name'], booking['coords'], 2015, 5);
+            //队列阻塞野蛮处理
+            //displayAOrder(booking['city_name'], booking['coords'], 2015, 5);
           };
           len_b = bookings_queue.length;
           console.log("booking queue dump %d -> %d", len_a, len_b);
@@ -178,7 +179,7 @@
         if (status != 0) {
           return;
         }
-        
+
         books_dict = data['data'];
         in_cnt = 0;
 
