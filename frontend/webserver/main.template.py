@@ -6,12 +6,10 @@ import tornado.web
 from tornado.options import define, options
 define("port", default=2097, help="run on the given port", type=int)
 
-from booking_board import html
-
 class IndexHandler(tornado.web.RequestHandler):
     def get(self):
         greeting = self.get_argument('greeting', 'Hello')
-        self.write(html)
+        self.write(greeting + ', friendly user!')
 
 if __name__ == "__main__":
     tornado.options.parse_command_line()
