@@ -1,7 +1,9 @@
-TEST_MODE = true;
+
 
 call_count = 1
 function updateBookingList(successHandler, errorHandler) {
+	TEST_MODE = true;
+	
 	if (TEST_MODE == true) {
 		//readTextFile(successHandler, errorHandler);
 		dumbUpdateBookingList(successHandler, errorHandler);
