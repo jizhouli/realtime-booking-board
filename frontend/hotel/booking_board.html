@@ -119,6 +119,7 @@
       var bookings_queue = [];
 
       // 定时器
+      var loadWaitInterval = 2*1000;
       var syncInterval = 5*1000; //ms
       var displayInterval = 200; //ms
       var colors = [];
@@ -199,10 +200,10 @@
         fillColorArray();
 
         // 设置数据同步定时器
-        syncTimer();
+        setTimeout(syncTimer, loadWaitInterval);
 
         // 设置展示定时器
-        displayTimer();
+        setTimeout(displayTimer, loadWaitInterval);
       }
 
       function syncTimer() {
