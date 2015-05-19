@@ -28,6 +28,22 @@ html='''
         text-shadow: 0.1em 0.1em 0.2em black;
         color: white;
       }
+      #msg {
+        position: absolute;
+        font-size: 30px;
+        font-family: sans-serif;
+        text-shadow: 0.1em 0.1em 0.2em black;
+        color: #d0d0ff;
+        top: 200px;
+        width: 600px;
+        text-align: center;
+      }
+      #lightbox {
+        width: 600px;
+        height: 480px;
+        background-color: #ffffff;
+        opacity: 0.8;
+      }
     </style>
     <script type="text/javascript" 
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
@@ -122,6 +138,7 @@ html='''
       var bookings_queue = [];
 
       // 定时器
+      var loadWaitInterval = 2*1000;
       var syncInterval = 5*1000; //ms
       var displayInterval = 200; //ms
       var colors = [];
@@ -202,10 +219,10 @@ html='''
         fillColorArray();
 
         // 设置数据同步定时器
-        syncTimer();
+        setTimeout(syncTimer, loadWaitInterval);
 
         // 设置展示定时器
-        displayTimer();
+        setTimeout(displayTimer, loadWaitInterval);
       }
 
       function syncTimer() {
@@ -323,6 +340,26 @@ html='''
         return array;
       }
 
+      // ------------- 互动控制 -------------
+      function start() {
+        /*
+        if (unlock && ! running) {
+          document.getElementById("lightbox").style.display = "none";
+          document.getElementById("msg").style.display = "none";
+          running = true;
+          nextMonth();
+        }
+        */
+      }
+
+      function stop() {
+        /*
+        document.getElementById("lightbox").style.display = "block";
+        document.getElementById("msg").style.display = "block";
+        running = false;
+        */
+      }
+
       // ------------- 动画展示 -------------
 
       function displayAOrder(city, coords, year, month) {
@@ -421,6 +458,8 @@ html='''
     <div id="map_canvas" style="width:100%; height:100%"></div>
     <div id="map_title">酒店搜索实时展示</div>
     <div id="city_board">北京</div>
+    <div id="lightbox" onmouseover="start()"></div>
+    <div id="msg"></div>
     <!--
     <div id="footer"></div>
     -->
