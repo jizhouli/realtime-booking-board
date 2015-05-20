@@ -248,14 +248,25 @@ class service_interface(service_base.service_base):
     def default_get(self, name):
         result = {}
         forretcity = {}
+        a = time.localtime(time.time())
+        hour, minute, second = a[3], a[4], a[5]
+        currentsecond = '%02d:%02d:%02d' % (hour, minute, second)
         print '11111111', name
         querydata = self.query_to_value()
         tempdata =  querydata['data'][0]['value'][0]
-        print tempdata[0], tempdata[1], 'bbbbbbbbbbb'
+        #print tempdata[0], tempdata[1], 'bbbbbbbbbbb'
+        if len(tempdata) == 1:
+            tempdata.append(currentsecond)
+        else:
+            if currentsecond > tempdata[1] or (tempdata[1] >= '00:00:00' and currentsecond > '23:00:00'):
+                currentsecond = tempdata[1]
 
+        retcityset = set()
         datas = tempdata[1].split(':')
         hour, minute, second = int(datas[0]), int(datas[1]), int(datas[2])
         while True:
+            if len(retcityset) >= 100:
+                break
             if second-1 <  0 :
                 second = 59
                 if minute-1 < 0:
@@ -267,26 +278,35 @@ class service_interface(service_base.service_base):
                 second = second - 1
             one_second_before = '%02d:%02d:%02d' % (hour, minute, second)
             if one_second_before != tempdata[0]:
-                for each in self._citydict[one_second_before]:
-                    if forretcity.get(each, ' ') == ' ':
-                        forretcity[each] = self._citydict[one_second_before][each]
-                    else:
-                        forretcity[each] += self._citydict[one_second_before][each]
+                try:
+                    for each in self._citydict[one_second_before]:
+                        retcityset.add(each)
+                        if forretcity.get(each, ' ') == ' ':
+                            forretcity[each] = self._citydict[one_second_before][each]
+                        else:
+                            forretcity[each] += self._citydict[one_second_before][each]
+                        if len(retcityset) >= 100:
+                            break
+                except:
+                    pass
             else:
                 break
 
         realdata = {}
         for each in forretcity:
             try:
-                realdata[each] = {}
-                realdata[each]['city_name'] = self._spellcitydict[each]['chinese']
-                realdata[each]['number'] = forretcity[each]
-                realdata[each]['latitude'] = self._spellcitydict[each]['latitude']
-                realdata[each]['longitude'] = self._spellcitydict[each]['longitude']
+                info = {}
+                info['city_name'] = self._spellcitydict[each]['chinese']
+                info['number'] = forretcity[each]
+                info['latitude'] = self._spellcitydict[each]['latitude']
+                info['longitude'] = self._spellcitydict[each]['longitude']
+                realdata[each] = info
             except:
                 pass
 
         result['data'] = realdata
+        result['currenttime'] = currentsecond
+        result['citynumber'] = len(retcityset)
         result['result'] = 0
         return result
         
