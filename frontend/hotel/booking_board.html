@@ -42,64 +42,28 @@
         opacity: 0.8;
       }
     </style>
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
     <script type="text/javascript" 
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
+      </script>
     <script type="text/javascript">
-      function getHTTPObject() {
-        if (typeof XMLHttpRequest == "undefined")
-          XMLHttpRequest = function () {
-            try { return new ActiveXObject("Msxml2.XMLHTTP.6.0"); }
-              catch (e) {}
-            try { return new ActiveXObject("Msxml2.XMLHTTP.3.0"); }
-              catch (e) {} 
-            try { return new ActiveXObject("Msxml2.XMLHTTP"); }
-              catch (e) {} 
-            return false;
-          }
-        return new XMLHttpRequest();
-      }
-    </script>
-    <script type="text/javascript">
-      call_count = 1
-      function updateBookingList(successHandler, errorHandler) {
-        TEST_MODE = true;
+      call_count = 1;
+      function updateBookingList(successHandler, errorHandler, timegap) {
+        TEST_MODE = false;
         
         if (TEST_MODE == true) {
           //readTextFile(successHandler, errorHandler);
           dumbUpdateBookingList(successHandler, errorHandler);
           return;
         }
-        var xhr = getHTTPObject();
-        if (xhr) {
-          // weather info - provided by www.openweathermap.org
-          xhr.open("GET", "http://api.openweathermap.org/data/2.5/weather?q=Beijing,cn", true)
-          
-          xhr.onreadystatechange = function() {
-            if (xhr.readyState == 4) {
-              status = xhr.status;
-              if (status == 200) {
-                data = JSON.parse(xhr.responseText);
-                weather = data['weather'][0]['main'];
 
-                var para = document.createElement("p");
-                var txt = document.createTextNode(call_count + '-' + weather);
-                para.appendChild(txt);
-                document.getElementById("footer").appendChild(para);
-                
-                successHandler && successHandler([call_count + '-' + weather]);
+        booking_url = "http://60.28.209.24:8027/?timegap=%22" + timegap + "%22";
 
-                call_count += 1;
-              }
-              else {
-                errorHandler && errorHandler(status);
-                console.warn("get status error - " + status.toString())
-              }
-            }
-          };
-          xhr.send(null);
-        } else {
-          errorHandler && errorHandler(status);
-          console.warn("Your browser doesn\'t support XMLHttpxhr");
+        ajax_flag = true;
+        if (ajax_flag == true)
+        {
+          $.ajax({url: booking_url, dataType: 'json', success: successHandler, fail: errorHandler});
+          return;
         }
       }
 
@@ -139,6 +103,8 @@
       var syncInterval = 5*1000; //ms
       var displayInterval = 200; //ms
       var colors = [];
+
+      var time_slice = '00:00:00';
 
       //var markersByMonth = [];
       //for (var i = 0; i < 12; ++i) {
@@ -224,7 +190,7 @@
 
       function syncTimer() {
         // sync data
-        updateBookingList(storeAsyncRespData, errorHandler);
+        updateBookingList(storeAsyncRespData, errorHandler, time_slice);
 
         // set next sync timer
         setTimeout(syncTimer, syncInterval);
@@ -276,6 +242,9 @@
         if (status != 0) {
           return;
         }
+
+        // 更新时间戳
+        time_slice = data['currenttime'];
 
         books_dict = data['data'];
         in_cnt = 0;
