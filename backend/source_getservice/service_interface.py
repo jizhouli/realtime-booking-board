@@ -145,6 +145,10 @@ class dbfunc(object):
         self.conn.close()
         self.conn = None
 
+def get_active_service(host, port, name):
+    url = 'http://%s:%s/%s?reserved="1"' % (host, port, name)
+    ret = urllib2.urlopen(url)
+    return ret.read()
 
 class service_interface(service_base.service_base):
     
@@ -159,6 +163,7 @@ class service_interface(service_base.service_base):
     def init_thread_proc(self):
         self._servicelist = []
         self._serviceset = set()
+        self.set_auto_update(1)
         return {'result' : '0'}
 
     def reset_thread_proc(self):
@@ -166,6 +171,13 @@ class service_interface(service_base.service_base):
         return {'result' : '0'} 
 
     def update_thread_proc(self):
+        newservicelist = []
+        for each in self._servicelist['data']:
+            rawret = get_active_service(each['host'], each['port'], 'info')
+            ret = json.loads(rawret)
+            if ret.get('status', ' ') == 'working':
+                newservicelist.append(each)
+        self._servicelist['data'] = newservicelist
 
         return {'result' : '0'} 
 
@@ -178,6 +190,7 @@ class service_interface(service_base.service_base):
         return result
 
     def default_get(self, name):
+        print web.ctx, '1111111111111'
         if name == 'register':
             info = {}
             info['host'] = web.ctx.environ['REMOTE_ADDR']
@@ -187,13 +200,24 @@ class service_interface(service_base.service_base):
                 self._serviceset.add(info['host'] + '_' + info['port'])
             return {'result' : '0'} 
         if name == 'getinstance':
+            print 'ccccccccccccccccccccc'
             result = {}
             result['data'] = self._servicelist
             result['result'] = '0'
             return result
 
     def default_post(self, name):
+        print web.data(), '111111111111111111111111111111111', web.data()[0], web.data()[1]
+        tempdata = json.loads(web.data())
+        print tempdata, 'bbbbbbbbbbbbbbb'
+        info = {}
+        info['host'] = web.ctx.environ['REMOTE_ADDR']
+        info['port'] = tempdata[1]
+        if info['host'] + '_' + info['port'] not in self._serviceset:
+            self._servicelist.append(info)
+            self._serviceset.add(info['host'] + '_' + info['port'])
 
+        print self._servicelist, '222222222222222222222222222222222'
         return {'result' : '0'}
         
 _instance = None
