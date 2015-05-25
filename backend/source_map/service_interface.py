@@ -188,12 +188,10 @@ class service_interface(service_base.service_base):
                 if self._spellcitydict.get(cityspelldict[str(ret[i]['city_id'])], ' ') != ' ':
                     self._spellcitydict[cityspelldict[str(ret[i]['city_id'])]]['latitude'] = str(ret[i]['b_latitude'])
                     self._spellcitydict[cityspelldict[str(ret[i]['city_id'])]]['longitude'] = str(ret[i]['b_longitude'])
-        print self._spellcitydict, 'CCCCCCCCCCCC'
 
         handler.close()
 
     def init_thread_proc(self):
-        print len(sys.argv), '@@@@@@@@@@@@@@@@@@', sys.argv[0], sys.argv[1]
         try:
             if os.path.isfile(DUMP_PATH + '/' + DUMP_FILE):
                 fpdump = open(DUMP_PATH + '/' + DUMP_FILE)
@@ -206,29 +204,18 @@ class service_interface(service_base.service_base):
         except:
             pass
 
-        print '###########################################'
-
-        #get_active_service('192.168.0.24', '8030', 'register')
         post_service_data('192.168.0.24', '8030', 'register', sys.argv)
-        print 'aaaaaaaaaaaaaaa'
         rawretdata = get_active_service('192.168.0.24', '8030', 'getinstance')
         retdata = json.loads(rawretdata)
         self._totalservicelist = retdata['data']
-        print retdata, 'ccccccccccccc', retdata['data']
         if len(retdata['data']) != 1:
-            print 'DDDDDDDDDDDDDD'
             tempnode = retdata['data'][0]
-            print tempnode['host'], tempnode['port'], 'othersget', 'fFFFFFFFFFFF'
             rawtotaldict = get_active_service(tempnode['host'], tempnode['port'], 'othersget')
-            print rawtotaldict, 'GGGGGGGGGGG'
             totaldict = json.loads(rawtotaldict)['data']
             self._citydict = totaldict['citydict']
             self._spellcitydict = totaldict['spellcitydict']
 
-        print self._spellcitydict, 'AAAAAAAAAAA'
-        print self._citydict, 'BBBBBBBBBB'
-
-        #self.set_auto_update(1)
+        self.set_auto_update(1)
 
         return {'result' : '0'}
 
@@ -243,6 +230,8 @@ class service_interface(service_base.service_base):
         hour, minute, second = a[3], a[4], a[5]
         if hour-1 < 0:
             hour = 23
+        else:
+            hour = hour-1
         secondset = set()
         for each in self._citydict:
             secondset.add(each)
@@ -277,7 +266,6 @@ class service_interface(service_base.service_base):
         hour, minute, second = a[3], a[4], a[5]
         currentsecond = '%02d:%02d:%02d' % (hour, minute, second)
         tempdata =  querydata['data'][0]['value'][0]
-        #print tempdata[0], tempdata[1], 'bbbbbbbbbbb'
         if len(tempdata) == 1:
             tempdata.append(currentsecond)
         else:
@@ -334,9 +322,7 @@ class service_interface(service_base.service_base):
         return result
 
     def default_get(self, name):
-        print name, 'EEEEEEEEEEEEEEEEEEEEEE'
         if name == 'othersget':
-            print 'JJJJJJJJJJJJJJJJ'
             totaldict = {}
             #info = {}
             #info['host'] = web.ctx.environ['REMOTE_ADDR']
@@ -355,13 +341,8 @@ class service_interface(service_base.service_base):
 
     def default_post(self, name):
         # default name is 'timedata'
-        #result = {}
-        print 'name:', name
-        print web.ctx.query, '4444444444'
-        print web.data(), '3eeeeeeeeeee'
         querydata = self.query_to_value()
         postdata = self.json_loads(web.data())
-        print querydata, postdata, '111111111111'
 
         a = time.localtime(time.time())
         hour, minute, second = a[3], a[4], a[5]
@@ -374,10 +355,6 @@ class service_interface(service_base.service_base):
                 self._citydict[currentsecond][each] = postdata[each]
             else:
                 self._citydict[currentsecond][each] += postdata[each] 
-        print self._citydict, '5555555555555'
-        #if name != 'otherspost':
-        #    for each in self._totalservicelist:
-        #        post_service_data(each['host'], each['port'], 'otherspost', web.data())
 
         return {'result' : '0'}
         
