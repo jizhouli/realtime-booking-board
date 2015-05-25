@@ -13,6 +13,7 @@ import time
 import ujson as json
 import service_base
 import traceback
+import urllib2
 
 import MySQLdb
 import types
@@ -145,6 +146,17 @@ class dbfunc(object):
         self.conn.close()
         self.conn = None
 
+def post_service_data(host, port, name, content):
+    url = 'http://%s:%s/%s?reserved="1"' % (host, port, name)
+    jdata = json.dumps(content)
+    req = urllib2.Request(url, jdata)
+    response = urllib2.urlopen(req)
+    return response.read()
+
+def get_active_service(host, port, name):
+    url = 'http://%s:%s/%s?reserved="1"' % (host, port, name)
+    ret = urllib2.urlopen(url)
+    return ret.read()
 
 class service_interface(service_base.service_base):
     
@@ -153,57 +165,70 @@ class service_interface(service_base.service_base):
     _file = ''
     _lines = []
     _zipvalue = {}
-    _citydict = {}
+    _citydict = {}   # this is city each second
     _spellcitydict = {}
+    _totalservicelist = []
 
-    def init_thread_proc(self):
-        try:
-            if os.path.isfile(DUMP_PATH + '/' + DUMP_FILE):
-                fpdump = open(DUMP_PATH + '/' + DUMP_FILE)
-                totaldict = pickle.load(fpdump)
-                fpdump.close()
-
-                self._spellcitydict = totaldict['spellcitydict']
-                self._citydict = totaldict['citydict']
-
-                return {'result' : '0'}
-            else:
-                pass
-        except:
-            pass
-
-        print 'aaaaaaaa'
+    def get_city_service(self):
         cityspelldict = {}
         db_conf = set_db_conf()
         handler = dbfunc(db_conf['host'], db_conf['user'], db_conf['passwd'], db_conf['db'], db_conf['port'])
         query = "select word, uniq_spell, type_id from trans_hotel_spell where type in('city', 'county')"
         ret =  handler.get_all_dict(query)
         for i in range(0, len(ret)):
-            print str(ret[i]['uniq_spell']), 'bbbbbbbbb', ret[i]['word']
             self._spellcitydict[str(ret[i]['uniq_spell'])] = {'chinese': ret[i]['word'], 'city_id': ret[i]['type_id']}
             cityspelldict[str(ret[i]['type_id'])] = str(ret[i]['uniq_spell'])
-        print self._spellcitydict, 'aaaaaaaaaaaaaaaaaaaaaa'
-        print cityspelldict, 'gggggggggg'
 
         count = 1
         query = "select b_latitude, b_longitude, city_id from trans_hotel_info where b_latitude<>0 and b_longitude<>0 group by city_id"
-        print query, 'ccccccccccc'
         ret =  handler.get_all_dict(query)
         for i in range(0, len(ret)):
             count += 1
-            print count, 'ddddddddd', str(ret[i]['b_latitude']), str(ret[i]['b_longitude']), ret[i]['city_id']
             if cityspelldict.get(str(ret[i]['city_id']), ' ') != ' ':
-                print 'fffff', cityspelldict[str(ret[i]['city_id'])]
                 if self._spellcitydict.get(cityspelldict[str(ret[i]['city_id'])], ' ') != ' ':
-                    print 'gggggg'
                     self._spellcitydict[cityspelldict[str(ret[i]['city_id'])]]['latitude'] = str(ret[i]['b_latitude'])
                     self._spellcitydict[cityspelldict[str(ret[i]['city_id'])]]['longitude'] = str(ret[i]['b_longitude'])
-
-        print self._spellcitydict, 'bbbbbbbbbbbbb'
+        print self._spellcitydict, 'CCCCCCCCCCCC'
 
         handler.close()
 
-        self.set_auto_update(1)
+    def init_thread_proc(self):
+        print len(sys.argv), '@@@@@@@@@@@@@@@@@@', sys.argv[0], sys.argv[1]
+        try:
+            if os.path.isfile(DUMP_PATH + '/' + DUMP_FILE):
+                fpdump = open(DUMP_PATH + '/' + DUMP_FILE)
+                totaldict = pickle.load(fpdump)
+                fpdump.close()
+                self._spellcitydict = totaldict['spellcitydict']
+                self._citydict = totaldict['citydict']
+            else:
+                self.get_city_service()
+        except:
+            pass
+
+        print '###########################################'
+
+        #get_active_service('192.168.0.24', '8030', 'register')
+        post_service_data('192.168.0.24', '8030', 'register', sys.argv)
+        print 'aaaaaaaaaaaaaaa'
+        rawretdata = get_active_service('192.168.0.24', '8030', 'getinstance')
+        retdata = json.loads(rawretdata)
+        self._totalservicelist = retdata['data']
+        print retdata, 'ccccccccccccc', retdata['data']
+        if len(retdata['data']) != 1:
+            print 'DDDDDDDDDDDDDD'
+            tempnode = retdata['data'][0]
+            print tempnode['host'], tempnode['port'], 'othersget', 'fFFFFFFFFFFF'
+            rawtotaldict = get_active_service(tempnode['host'], tempnode['port'], 'othersget')
+            print rawtotaldict, 'GGGGGGGGGGG'
+            totaldict = json.loads(rawtotaldict)['data']
+            self._citydict = totaldict['citydict']
+            self._spellcitydict = totaldict['spellcitydict']
+
+        print self._spellcitydict, 'AAAAAAAAAAA'
+        print self._citydict, 'BBBBBBBBBB'
+
+        #self.set_auto_update(1)
 
         return {'result' : '0'}
 
@@ -245,14 +270,12 @@ class service_interface(service_base.service_base):
         }
         return result
 
-    def default_get(self, name):
+    def get_citydict(self, querydata):
         result = {}
         forretcity = {}
         a = time.localtime(time.time())
         hour, minute, second = a[3], a[4], a[5]
         currentsecond = '%02d:%02d:%02d' % (hour, minute, second)
-        print '11111111', name
-        querydata = self.query_to_value()
         tempdata =  querydata['data'][0]['value'][0]
         #print tempdata[0], tempdata[1], 'bbbbbbbbbbb'
         if len(tempdata) == 1:
@@ -309,11 +332,29 @@ class service_interface(service_base.service_base):
         result['citynumber'] = len(retcityset)
         result['result'] = 0
         return result
-        
 
-        #return {'result' : '0'} 
+    def default_get(self, name):
+        print name, 'EEEEEEEEEEEEEEEEEEEEEE'
+        if name == 'othersget':
+            print 'JJJJJJJJJJJJJJJJ'
+            totaldict = {}
+            #info = {}
+            #info['host'] = web.ctx.environ['REMOTE_ADDR']
+            #info['port'] = web.ctx.environ['REMOTE_PORT']
+            #self._totalservicelist.append(info)
+            totaldict['citydict'] = self._citydict
+            totaldict['spellcitydict'] = self._spellcitydict
+            #totaldict['totalservicelist'] = self._totalservicelist
+            result = {}
+            result['data'] = totaldict
+            result['result'] = '0'
+            return result
+        if name == 'frontget':
+            querydata = self.query_to_value()
+            return self.get_citydict(querydata)
 
     def default_post(self, name):
+        # default name is 'timedata'
         #result = {}
         print 'name:', name
         print web.ctx.query, '4444444444'
@@ -334,6 +375,9 @@ class service_interface(service_base.service_base):
             else:
                 self._citydict[currentsecond][each] += postdata[each] 
         print self._citydict, '5555555555555'
+        #if name != 'otherspost':
+        #    for each in self._totalservicelist:
+        #        post_service_data(each['host'], each['port'], 'otherspost', web.data())
 
         return {'result' : '0'}
         
