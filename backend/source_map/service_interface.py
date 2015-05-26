@@ -168,6 +168,9 @@ class service_interface(service_base.service_base):
     _citydict = {}   # this is city each second
     _spellcitydict = {}
     _totalservicelist = []
+    _selfport = ''
+    _selfname = ''
+    _selfparmeter = []
 
     def get_city_service(self):
         cityspelldict = {}
@@ -204,6 +207,8 @@ class service_interface(service_base.service_base):
         except:
             pass
 
+        self._selfparmeter = sys.argv
+        
         post_service_data('192.168.0.24', '8030', 'register', sys.argv)
         rawretdata = get_active_service('192.168.0.24', '8030', 'getinstance')
         retdata = json.loads(rawretdata)
@@ -226,6 +231,7 @@ class service_interface(service_base.service_base):
     def update_thread_proc(self):
         print 'this is update  ******************************************************8888888888888888888888'
 
+        post_service_data('192.168.0.24', '8030', 'register', self._selfparmeter)
         a = time.localtime(time.time())
         hour, minute, second = a[3], a[4], a[5]
         if hour-1 < 0:
