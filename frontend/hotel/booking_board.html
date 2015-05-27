@@ -42,10 +42,15 @@
         opacity: 0.8;
       }
     </style>
-    <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
     <script type="text/javascript" 
       src="http://maps.googleapis.com/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false">
       </script>
+    <!--
+    <script type="text/javascript" 
+      src="http://ditu.google.cn/maps/api/js?key=AIzaSyC5AdIXriwJl1vhMcbm661l3b5EF8QuIZk&sensor=false&language=zh-CN">
+      </script>
+      -->
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
     <script type="text/javascript">
       call_count = 1;
       function updateBookingList(successHandler, errorHandler, timegap) {
@@ -57,7 +62,8 @@
           return;
         }
 
-        booking_url = "http://60.28.209.24:8027/?timegap=%22" + timegap + "%22";
+        booking_url = "/first/frontget?timegap=\"" + timegap + "\"";
+        console.log(booking_url);
 
         ajax_flag = true;
         if (ajax_flag == true)
@@ -100,7 +106,7 @@
 
       // 定时器
       var loadWaitInterval = 2*1000;
-      var syncInterval = 5*1000; //ms
+      var syncInterval = 10*1000; //ms
       var displayInterval = 200; //ms
       var colors = [];
 
@@ -222,16 +228,16 @@
         if (bookings_queue.length > 100)
         {
           dynamicDisplayInterval = 5;
-          console.log('[dynamic interval] 3. SET %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
+          // console.log('[dynamic interval] 3. SET %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
         }
         else if (bookings_queue.length > 50)
         {
           dynamicDisplayInterval = Math.floor(syncInterval/(bookings_queue.length+1));
-          console.log('[dynamic interval] 2. CALC %dms (%d/%d)', dynamicDisplayInterval, syncInterval, bookings_queue.length);
+          // console.log('[dynamic interval] 2. CALC %dms (%d/%d)', dynamicDisplayInterval, syncInterval, bookings_queue.length);
         }
         else
         {
-          console.log('[dynamic interval] 1. default %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
+          // console.log('[dynamic interval] 1. default %dms (%d)', dynamicDisplayInterval, bookings_queue.length);
         }
 
         setTimeout(displayTimer, dynamicDisplayInterval);
